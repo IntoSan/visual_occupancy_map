@@ -1,0 +1,12 @@
+<launch>
+    <remap from="/vslam_stereo_inertial/KF_DebugImage" to="/zed2/zed_node/left/image_rect_color"/>
+    <remap from="/vslam_stereo_inertial/KF_MapPoints" to="/vslam2/KF_MapPoints_Stereo"/>
+    <remap from="/vslam_stereo_inertial/KF_Pose" to="/vslam2/KF_Pose_Stereo"/>
+    <node pkg="occupancy_grid_map_ros"  type="grid_map_node"  name="grid_map_node" 
+          args="50 1 0 30 -10 30 -10 0.55 0.5 1 20 1 1 " 
+          cwd="node"   output="screen">
+    
+    </node>
+
+</launch>
+
