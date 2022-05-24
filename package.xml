@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>occupancy_grid_map_ros</name>
+  <name>visual_occupancy_map</name>
   <version>0.0.0</version>
-  <description>The grid_map package</description>
+  <description>The visual_occupancy_map package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
