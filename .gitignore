@@ -1,4 +1,6 @@
 .vscode
+.devcontainer/
+Dockerfile
 src/dense_occupancy_grid_map.cpp
 config/dense.yaml
 config/openvslam.yaml

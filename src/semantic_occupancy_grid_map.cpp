@@ -479,7 +479,7 @@ void processMapPt(const geometry_msgs::Point &curr_pt, cv::Mat &occupied,
 }
 
 void initialSubmaps(){
-	ifstream in("/home/igor/catkin_ws/src/visual_occupancy_map/config/submaps.txt");
+	ifstream in("./config/submaps.txt");
 	string line;
 	if (in){
 		while (getline(in, line)){
