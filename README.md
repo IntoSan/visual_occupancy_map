@@ -15,13 +15,13 @@ You can use provided Dockerfile or build using catkin build.
 
 - ` /KF_pose` - **nav_msgs::Odometry** - pose of camera in a keyframe;
 - ` /KF_map_points` - **sensor_msgs::PointCloud** - map points that are visible on a keyframe;
-- ` /semantic_image` - **sensor_msgs::Image** - image with result of semantic segmentation (only for semantic_occupancy_map_node);
+- ` /semantic_image` - **sensor_msgs::Image** - image with result of semantic segmentation **(only for semantic_occupancy_map_node)**;
 
 ## Published topics
 
 - ` /visual_occupancy_node/grid_map` - **nav_msgs::OccupancyGrid** - occupancy grid map;
 - ` /visual_occupancy_node/trajectory_grid_map` - **sensor_msgs::Image** - image with occupancy grid map and trajectory of robot;
-- ` /visual_occupancy_node/semantic_occupancy_map` - **sensor_msgs::Image** - semantic occupancy map (only for semantic_occupancy_map_node);
+- ` /visual_occupancy_node/semantic_occupancy_map` - **sensor_msgs::Image** - semantic occupancy map **(only for semantic_occupancy_map_node)**;
 
 ## Parameters
 You can change next parameters in .yaml file:
