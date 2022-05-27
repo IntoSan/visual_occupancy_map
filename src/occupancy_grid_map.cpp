@@ -599,9 +599,13 @@ void extensionMap(const bool& width, const bool& positive){
 	cv::Mat new_global_visit_counter(h, w, CV_32FC1);
 	new_global_occupied_counter.setTo(cv::Scalar(0));
 	new_global_visit_counter.setTo(cv::Scalar(0));
-	// Positive Axe X
-	if (width && positive){
-		cout << "Positive Axe X extension" << endl;
+	// Positive Axe X and Positive Axe Z
+	if (positive){
+		if (width){
+			cout << "Positive Axe X extension" << endl;
+		} else {
+			cout << "Positive Axe Z extension" << endl;
+		}
 		global_occupied_counter.copyTo(new_global_occupied_counter(cv::Rect(0, 0, global_occupied_counter.cols, global_occupied_counter.rows)));
 		global_visit_counter.copyTo(new_global_visit_counter(cv::Rect(0, 0, global_visit_counter.cols, global_visit_counter.rows)));
        
@@ -619,15 +623,7 @@ void extensionMap(const bool& width, const bool& positive){
 				trj.push_back(cv::Point(int(floor((pos.x - grid_min_x) * norm_factor_x)), int(floor((pos.y - grid_min_z) * norm_factor_z))));
 			}
 		}
-	}
-	// Positive Axe Z
-	if (!width && positive){
-		cout << "Positive Axe Z extension" << endl;
-		global_occupied_counter.copyTo(new_global_occupied_counter(cv::Rect(0, 0, global_occupied_counter.cols, global_occupied_counter.rows)));
-		global_visit_counter.copyTo(new_global_visit_counter(cv::Rect(0, 0, global_visit_counter.cols, global_visit_counter.rows)));
-        
-	}
-	
+	}	
 	// Negative Axe Z
 	if (!width && !positive){
 		cout << "Negative Axe Z extension" << endl;

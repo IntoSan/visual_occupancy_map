@@ -3,7 +3,7 @@
     <remap from="/KF_pose" to="/vslam2/KF_Pose_Stereo"/>
     <remap from="/semantic_image" to="/zed2/zed_node/semantics"/>
     <node pkg="visual_occupancy_map"  type="semantic_occupancy_map_node"  name="semantic_occupancy_map_node" 
-          args="$(find visual_occupancy_map)/config/submaps.yaml"
+          args="$(find visual_occupancy_map)/config/submaps.yaml $(find visual_occupancy_map)/config/submaps.txt $(find visual_occupancy_map)/config/semantic_filter.txt"
           cwd="node"   output="screen">
     
     </node>

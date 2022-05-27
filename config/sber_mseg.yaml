@@ -3,7 +3,7 @@
 
 Scale_factor: 20 
 Tcw_form: 0
-Cloud_max_x: 25
+Cloud_max_x: 20
 Cloud_min_x: -15
 Cloud_max_z: 15
 Cloud_min_z: -15

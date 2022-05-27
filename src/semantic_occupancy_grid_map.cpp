@@ -3,7 +3,8 @@
 #include<fstream>
 #include<chrono>
 
-#include<ros/ros.h>
+#include <ros/ros.h>
+#include <ros/package.h>
 #include <cv_bridge/cv_bridge.h>
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/PoseArray.h"
@@ -72,6 +73,7 @@ int kf_pos_grid_x, kf_pos_grid_z;
 std::vector<cv::Point> trj;
 std::vector<cv::Point> kf_poses;
 std::map<std::vector<uchar>, cv::Mat> submaps;
+std::vector<std::vector<uchar>> sem_filter_colors;
 
 using namespace std;
 void ptsKFCallback(const sensor_msgs::PointCloud::ConstPtr& MapPoints, const nav_msgs::Odometry::ConstPtr& Kf_pose, const sensor_msgs::Image::ConstPtr& Sem_mask);
@@ -88,7 +90,8 @@ void processMapPt(const geometry_msgs::Point &curr_pt, cv::Mat &occupied,
 void processMapPts(const std::vector<geometry_msgs::Pose> &pts, unsigned int n_pts,
 	unsigned int start_id, int kf_pos_grid_x, int kf_pos_grid_z);
 void getGridMap();
-void initialSubmaps();
+void initialSubmaps(int argc, char **argv);
+void readSemFilter(int argc, char **argv);
 
 //TODO .yaml reading
 float fx_zed=524.73925804;
@@ -172,8 +175,12 @@ int main(int argc, char **argv){
 	}
 	
 	if (make_submaps){
-		initialSubmaps();
+		initialSubmaps(argc, argv);
 	}
+	if (use_semantic_filter){
+		readSemFilter(argc, argv);
+	}
+
 	ros::spin();
 	ros::shutdown();
 	cv::destroyAllWindows();
@@ -291,12 +298,28 @@ void ptsKFCallback(const sensor_msgs::PointCloud::ConstPtr& MapPoints, const nav
         if (u > 0 && u <= width && v > 0 && v <= height){
             // get pixel
             cv::Vec3b color = sem_image.at<cv::Vec3b>(v - 1, u - 1);
-			if (use_semantic_filter){
-				if (color[0] != 85 || color[1] != 170 || color[2] != 255)
+			if (use_semantic_filter){	
+				vector<uchar> ucolor;
+				ucolor.push_back(color[2]);
+				ucolor.push_back(color[1]);
+				ucolor.push_back(color[0]);
+				bool found = false;
+				for (const auto& i : sem_filter_colors){
+					if (i == ucolor){
+						found = true;
+						sem_MPs.push_back({point, color[0], color[1], color[2]});
+					}
+				}
+				if (!found){
 					continue;
+				}
 			}		
-            sem_MPs.push_back({point, color[0], color[1], color[2]});
-        }
+            else {
+				sem_MPs.push_back({point, color[0], color[1], color[2]});
+			}
+        } else {
+			continue;
+		}
 		
 		geometry_msgs::Pose tempPt;
 		tempPt.position.x = mp.x;
@@ -478,8 +501,8 @@ void processMapPt(const geometry_msgs::Point &curr_pt, cv::Mat &occupied,
 	}
 }
 
-void initialSubmaps(){
-	ifstream in("./config/submaps.txt");
+void initialSubmaps(int argc, char **argv){
+	ifstream in(argv[2]);
 	string line;
 	if (in){
 		while (getline(in, line)){
@@ -502,6 +525,30 @@ void initialSubmaps(){
 			submaps[color] = new_map;
 		}	
 	}	
+}
+
+void readSemFilter(int argc, char **argv){
+	ifstream in(argv[3]);
+	string line;
+	if (in){
+		while (getline(in, line)){
+			stringstream s(line);
+			std::vector<uchar> color;
+			int red;
+			int green;
+			int blue;
+			s >> red;
+			s >> green;
+			s >> blue;
+			uchar uc_red = (uchar) red;
+			uchar uc_green = (uchar) green;
+			uchar uc_blue = (uchar) blue;
+			color.push_back(uc_red);
+			color.push_back(uc_green);
+			color.push_back(uc_blue);
+			sem_filter_colors.push_back(color);
+		}
+	}
 }
 
 void processMapPts(const std::vector<geometry_msgs::Pose> &pts, unsigned int n_pts,
@@ -558,7 +605,7 @@ void updateGridMap(const geometry_msgs::PoseArray::ConstPtr& pts_and_pose){
 		return;
 	++n_kf_received;
 	unsigned int n_pts = pts_and_pose->poses.size() - 1;
-	printf("Processing key frame %u and %u points\n",n_kf_received, n_pts);
+	// printf("Processing key frame %u and %u points\n",n_kf_received, n_pts);
 	processMapPts(pts_and_pose->poses, n_pts, 1, kf_pos_grid_x, kf_pos_grid_z);
 	getGridMap();
 	
@@ -726,6 +773,7 @@ void printParams() {
 	printf("occupied_thresh: %f\n", occupied_thresh);
 	printf("use_local_counters: %d\n", use_local_counters);
 	printf("use_gaussian_counters: %d\n", use_gaussian_counters);
+	printf("make_submaps: %d\n", make_submaps);
 	printf("use_semantic_filter: %d\n", use_semantic_filter);
 	printf("visit_thresh: %d\n", visit_thresh);
 	printf("step of extension: %f\n", step_extension);
@@ -759,12 +807,26 @@ void extensionMap(const bool& width, const bool& positive){
 	
     cv::Mat new_semantic_map(h, w, CV_8UC3);
     new_semantic_map.setTo(cv::Scalar(64, 64, 64));
-	// Positive Axe X
-	if (width && positive){
-		cout << "Positive Axe X extension" << endl;
+	
+	// Positive Axe X and Positive Axe Z
+	if (positive){
+		if (width){
+			cout << "Positive Axe X extension" << endl;
+		} else {
+			cout << "Positive Axe Z extension" << endl;
+		}
+		
 		global_occupied_counter.copyTo(new_global_occupied_counter(cv::Rect(0, 0, global_occupied_counter.cols, global_occupied_counter.rows)));
 		global_visit_counter.copyTo(new_global_visit_counter(cv::Rect(0, 0, global_visit_counter.cols, global_visit_counter.rows)));
         semantic_map.copyTo(new_semantic_map(cv::Rect(0, 0,semantic_map.cols, semantic_map.rows)));
+		if (make_submaps){
+			for (auto&  submap : submaps){
+				cv::Mat new_submap(h, w, CV_8UC3);
+				new_submap.setTo(cv::Scalar(128, 128, 128));
+				submap.second.copyTo(new_submap(cv::Rect(0,0, submap.second.cols, submap.second.rows)));
+				submap.second = new_submap;
+			}
+		}
 	}
 	// Negative Axe X
 	if (width && !positive){
@@ -772,6 +834,14 @@ void extensionMap(const bool& width, const bool& positive){
 		global_occupied_counter.copyTo(new_global_occupied_counter(cv::Rect(step_extension * scale_factor, 0, global_occupied_counter.cols, global_occupied_counter.rows)));
 		global_visit_counter.copyTo(new_global_visit_counter(cv::Rect(step_extension * scale_factor, 0, global_visit_counter.cols, global_visit_counter.rows)));
 		semantic_map.copyTo(new_semantic_map(cv::Rect(step_extension * scale_factor, 0,semantic_map.cols, semantic_map.rows)));
+		if (make_submaps){
+			for (auto&  submap : submaps){
+				cv::Mat new_submap(h, w, CV_8UC3);
+				new_submap.setTo(cv::Scalar(128, 128, 128));
+				submap.second.copyTo(new_submap(cv::Rect(step_extension * scale_factor,0, submap.second.cols, submap.second.rows)));
+				submap.second = new_submap;
+			}
+		}
         grid_map_msg.info.origin.position.x -=  step_extension;
 		if (publish_trajectory){
 			trj.clear();
@@ -780,20 +850,21 @@ void extensionMap(const bool& width, const bool& positive){
 			}
 		}
 	}
-	// Positive Axe Z
-	if (!width && positive){
-		cout << "Positive Axe Z extension" << endl;
-		global_occupied_counter.copyTo(new_global_occupied_counter(cv::Rect(0, 0, global_occupied_counter.cols, global_occupied_counter.rows)));
-		global_visit_counter.copyTo(new_global_visit_counter(cv::Rect(0, 0, global_visit_counter.cols, global_visit_counter.rows)));
-        semantic_map.copyTo(new_semantic_map(cv::Rect(0, 0,semantic_map.cols, semantic_map.rows)));
-	}
 	// Negative Axe Z
 	if (!width && !positive){
 		cout << "Negative Axe Z extension" << endl;
 		global_occupied_counter.copyTo(new_global_occupied_counter(cv::Rect(0, step_extension * scale_factor, global_occupied_counter.cols, global_occupied_counter.rows)));
 		global_visit_counter.copyTo(new_global_visit_counter(cv::Rect(0, step_extension * scale_factor, global_visit_counter.cols, global_visit_counter.rows)));
 		semantic_map.copyTo(new_semantic_map(cv::Rect(0, step_extension * scale_factor, semantic_map.cols, semantic_map.rows)));
-        grid_map_msg.info.origin.position.y -=  step_extension;
+        if (make_submaps){
+			for (auto&  submap : submaps){
+				cv::Mat new_submap(h, w, CV_8UC3);
+				new_submap.setTo(cv::Scalar(128, 128, 128));
+				submap.second.copyTo(new_submap(cv::Rect(0,step_extension * scale_factor, submap.second.cols, submap.second.rows)));
+				submap.second = new_submap;
+			}
+		}
+		grid_map_msg.info.origin.position.y -=  step_extension;
 		if (publish_trajectory){
 			trj.clear();
 			for (cv::Point& pos : kf_poses){
