@@ -45,6 +45,7 @@ int gaussian_kernel_size = 3;
 int canny_thresh = 350;
 float upper_height = 1.0;
 float lower_height = 0.0;
+float height_cam = 0.5;
 bool Tcw_form = false;
 
 float grid_max_x, grid_min_x,grid_max_z, grid_min_z;
@@ -131,7 +132,7 @@ int main(int argc, char **argv){
 	ros::NodeHandle nodeHandler;
 
 
-	ros::Subscriber sub_all_kf_and_pts = nodeHandler.subscribe("all_kf_and_pts", 1000, loopClosingCallback);
+	ros::Subscriber sub_all_kf_and_pts = nodeHandler.subscribe("/all_KF_and_points", 1000, loopClosingCallback);
 	message_filters::Subscriber<sensor_msgs::PointCloud> MapPoints_sub(nodeHandler, "/KF_map_points", 1000);
     message_filters::Subscriber<nav_msgs::Odometry> KF_pose_sub(nodeHandler, "/KF_pose", 1000);
  
@@ -205,9 +206,11 @@ void ptsKFCallback(const sensor_msgs::PointCloud::ConstPtr& MapPoints, const nav
 	
 	if (first_msg){
 		// Set coordinate system origin
-		grid_map_msg.info.origin.position.x = temp.position.x + cloud_min_x;
-		grid_map_msg.info.origin.position.y = temp.position.z + cloud_min_z;
-		grid_map_msg.info.origin.position.z = 0;
+		// grid_map_msg.info.origin.position.x = temp.position.x + cloud_min_x;
+		// grid_map_msg.info.origin.position.y = temp.position.z + cloud_min_z;
+		grid_map_msg.info.origin.position.x = cloud_min_x;
+		grid_map_msg.info.origin.position.y = cloud_min_z;
+		grid_map_msg.info.origin.position.z = temp.position.y - height_cam;
 		
 		grid_map_msg.info.origin.orientation.w = 1;
 		grid_map_msg.info.origin.orientation.x = 0;
@@ -434,6 +437,8 @@ void updateGridMap(const geometry_msgs::PoseArray::ConstPtr& pts_and_pose){
 void resetGridMap(const geometry_msgs::PoseArray::ConstPtr& all_kf_and_pts){
 	global_visit_counter.setTo(0);
 	global_occupied_counter.setTo(0);
+	// first_msg = true;
+	trj.clear();
 
 	unsigned int n_kf = all_kf_and_pts->poses[0].position.x;
 	if ((unsigned int) (all_kf_and_pts->poses[0].position.y) != n_kf ||
@@ -457,12 +462,20 @@ void resetGridMap(const geometry_msgs::PoseArray::ConstPtr& all_kf_and_pts){
 			printf("resetGridMap :: Unexpected formatting in the point count element for keyframe %d\n", kf_id);
 			return;
 		}
+		// if (first_msg){
+		// 	grid_map_msg.info.origin.position.x = cloud_min_x;
+		// 	grid_map_msg.info.origin.position.y = cloud_min_z;
+		// 	grid_map_msg.info.origin.position.z = kf_location.y - height_cam;
+		// 	first_msg = false;
+		// }
 		float kf_pos_x = kf_location.x*scale_factor;
-		float kf_pos_z = kf_location.z*scale_factor;
+		float kf_pos_z = kf_location.y*scale_factor;
 
 		int kf_pos_grid_x = int(floor((kf_pos_x - grid_min_x) * norm_factor_x));
 		int kf_pos_grid_z = int(floor((kf_pos_z - grid_min_z) * norm_factor_z));
 
+		trj.push_back(cv::Point(kf_pos_grid_x, kf_pos_grid_z));
+		
 		if (kf_pos_grid_x < 0 || kf_pos_grid_x >= w)
 			continue;
 

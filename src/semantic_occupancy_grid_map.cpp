@@ -244,19 +244,15 @@ void ptsKFCallback(const sensor_msgs::PointCloud::ConstPtr& MapPoints, const nav
 		temp.orientation.y = Kf_pose->pose.pose.orientation.y;
 		temp.orientation.z = Kf_pose->pose.pose.orientation.z;
 
-		// Convert from Twc to Tcw
-		temp_sem.position = Kf_pose->pose.pose.position;
-		temp_sem.orientation = Kf_pose->pose.pose.orientation;
-	
-		Eigen::Quaterniond Q(temp_sem.orientation.w,
-						 temp_sem.orientation.x,
-						 temp_sem.orientation.y,
-						 temp_sem.orientation.z);
+		Eigen::Quaterniond Q(temp.orientation.w,
+						 temp.orientation.x,
+						 temp.orientation.y,
+						 temp.orientation.z);
 	
 		Rwc = Q.toRotationMatrix();
-        Pwc[0] = temp_sem.position.x;
-		Pwc[1] = temp_sem.position.y;
-        Pwc[2] = temp_sem.position.z;
+        Pwc[0] = temp.position.x;
+		Pwc[1] = temp.position.y;
+        Pwc[2] = temp.position.z;
 	}
 	
 	if (first_msg){

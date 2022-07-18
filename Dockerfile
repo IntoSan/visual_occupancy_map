@@ -47,9 +47,7 @@ RUN mkdir -p $CATKIN_WS/src/visual_occupancy_map/ && \
     -DCMAKE_BUILD_TYPE=Release && \
     catkin config --merge-devel
 
-
-RUN cd $CATKIN_WS/src && \ 
-    git clone https://github.com/IntoSan/visual_occupancy_map.git
+COPY . $CATKIN_WS/src/visual_occupancy_map/
 
 RUN rosdep update
 
